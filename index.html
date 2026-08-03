@@ -210,6 +210,90 @@
     z-index:50;
   }
   .toast.ver{opacity:1}
+  /* ---------- Selección de turno ---------- */
+  #pantallaTurno{
+    position:fixed;
+    inset:0;
+    z-index:100;
+    background:var(--pizarron);
+    background-image:radial-gradient(rgba(255,255,255,.04) 1px, transparent 1px);
+    background-size:14px 14px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:24px;
+    padding:24px;
+    text-align:center;
+  }
+  #pantallaTurno.oculta{display:none}
+  #pantallaTurno h1{
+    font-family:'Patrick Hand',cursive;
+    font-size:2.2rem;
+    color:var(--tiza);
+    text-shadow:0 1px 0 rgba(0,0,0,.25);
+  }
+  #pantallaTurno p{color:var(--tiza);opacity:.85;font-size:1rem;margin-top:-14px}
+  .botones-turno{
+    display:flex;
+    gap:16px;
+    flex-wrap:wrap;
+    justify-content:center;
+    width:100%;
+    max-width:500px;
+  }
+  .btn-turno{
+    flex:1;
+    min-width:180px;
+    min-height:140px;
+    border:none;
+    border-radius:14px;
+    background:var(--papel);
+    color:var(--tinta);
+    font-family:'Nunito',sans-serif;
+    font-weight:800;
+    font-size:1.15rem;
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    box-shadow:0 4px 12px rgba(0,0,0,.25);
+    transition:transform .12s, filter .12s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .btn-turno:hover{transform:translateY(-3px);filter:brightness(1.03)}
+  .btn-turno:focus-visible{outline:3px solid var(--maiz);outline-offset:3px}
+  .btn-turno .ico-turno{font-size:2.6rem;line-height:1}
+  .btn-turno .sub{font-size:.8rem;font-weight:600;color:var(--gris)}
+  .btn-turno.manana{border-bottom:6px solid var(--maiz)}
+  .btn-turno.tarde{border-bottom:6px solid var(--madera)}
+  /* Indicador de turno en el header */
+  .chip-turno{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    margin-top:8px;
+    padding:4px 12px;
+    border-radius:20px;
+    background:rgba(255,255,255,.12);
+    color:var(--tiza);
+    font-size:.8rem;
+    font-weight:700;
+  }
+  .chip-turno button{
+    border:none;
+    background:var(--maiz);
+    color:var(--tinta);
+    font-family:inherit;
+    font-weight:800;
+    font-size:.72rem;
+    padding:3px 10px;
+    border-radius:14px;
+    cursor:pointer;
+  }
+  .chip-turno button:focus-visible{outline:2px solid var(--tiza);outline-offset:1px}
   /* ---------- Optimización para teléfonos ---------- */
   @media (max-width:640px){
     header{padding:14px 12px 12px}
@@ -261,9 +345,31 @@
 </head>
 <body>
 
+<!-- ================= SELECCIÓN DE TURNO ================= -->
+<div id="pantallaTurno">
+  <h1>🏪 Kiosco Escolar</h1>
+  <p>¿Con qué caja vas a trabajar?</p>
+  <div class="botones-turno">
+    <button class="btn-turno manana" onclick="elegirTurno('manana')">
+      <span class="ico-turno">☀️</span>
+      Turno Mañana
+      <span class="sub">Caja del turno mañana</span>
+    </button>
+    <button class="btn-turno tarde" onclick="elegirTurno('tarde')">
+      <span class="ico-turno">🌇</span>
+      Turno Tarde
+      <span class="sub">Caja del turno tarde</span>
+    </button>
+  </div>
+</div>
+
 <header>
   <h1>🏪 Kiosco Escolar</h1>
   <p>Hoy es <span id="fechaHoy"></span></p>
+  <div class="chip-turno" id="chipTurno" style="display:none">
+    <span id="etiquetaTurno"></span>
+    <button onclick="cambiarTurno()">Cambiar</button>
+  </div>
 </header>
 
 <nav>
@@ -384,6 +490,34 @@ const SUPABASE_KEY = 'sb_publishable_4tEkUHgIe3V9581m2QGPbw_7IlMKiNR';      // p
 ========================================================= */
 let datos = { recaudaciones: [], fiados: [], pedidos: [] };
 let memoriaSolo = false;
+let turno = null; // 'manana' | 'tarde'
+let datosPorTurno = { manana: null, tarde: null }; // caché en memoria si Supabase no está configurado
+
+function nombreTurno(t){
+  return (t || turno) === 'manana' ? 'Turno Mañana' : 'Turno Tarde';
+}
+function iconoTurno(t){
+  return (t || turno) === 'manana' ? '☀️' : '🌇';
+}
+
+function elegirTurno(t){
+  // Si ya había un turno activo (cambio de turno), guardo su estado en memoria
+  if (turno && memoriaSolo) datosPorTurno[turno] = datos;
+  turno = t;
+  document.getElementById('pantallaTurno').classList.add('oculta');
+  const chip = document.getElementById('chipTurno');
+  chip.style.display = 'inline-flex';
+  document.getElementById('etiquetaTurno').textContent = iconoTurno() + ' ' + nombreTurno();
+  datos = { recaudaciones: [], fiados: [], pedidos: [] };
+  cargar();
+}
+
+function cambiarTurno(){
+  if (memoriaSolo) datosPorTurno[turno] = datos;
+  turno = null;
+  document.getElementById('pantallaTurno').classList.remove('oculta');
+  window.scrollTo({top:0, behavior:'auto'});
+}
 
 function configurada(){
   return SUPABASE_URL.startsWith('https://') && SUPABASE_KEY.length > 30;
@@ -414,29 +548,56 @@ async function cargar(){
     const aviso = document.getElementById('avisoMemoria');
     aviso.textContent = '⚠️ Falta configurar Supabase: abrí index.html y pegá tu URL y tu anon key donde dice CONFIGURACIÓN. Mientras tanto, los datos solo duran mientras la página esté abierta.';
     aviso.style.display = 'block';
+    // Recupero lo que haya quedado en memoria para este turno
+    datos = datosPorTurno[turno] || { recaudaciones: [], fiados: [], pedidos: [] };
     render();
     return;
   }
   try{
-    const r = await fetch(SUPABASE_URL + '/rest/v1/kiosco_datos?id=eq.principal&select=datos', {
+    const r = await fetch(SUPABASE_URL + '/rest/v1/kiosco_datos?id=eq.' + turno + '&select=datos', {
       headers: cabeceras()
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const j = await r.json();
-    if (Array.isArray(j) && j.length && j[0].datos) datos = j[0].datos;
+    if (Array.isArray(j) && j.length && j[0].datos){
+      datos = j[0].datos;
+    } else {
+      // No hay datos para este turno todavía: si existen datos viejos en
+      // 'principal' (versión anterior sin turnos), ofrezco importarlos.
+      await migrarDesdePrincipal();
+    }
   }catch(e){
     mostrarToast('No se pudo conectar a la base de datos');
   }
   render();
 }
 
+async function migrarDesdePrincipal(){
+  try{
+    const r = await fetch(SUPABASE_URL + '/rest/v1/kiosco_datos?id=eq.principal&select=datos', {
+      headers: cabeceras()
+    });
+    if (!r.ok) return;
+    const j = await r.json();
+    const viejos = Array.isArray(j) && j.length ? j[0].datos : null;
+    const hayAlgo = viejos && ((viejos.recaudaciones||[]).length || (viejos.fiados||[]).length || (viejos.pedidos||[]).length);
+    if (!hayAlgo) return;
+    if (confirm('Se encontraron datos de la versión anterior (sin turnos).\n¿Querés importarlos a la caja del ' + nombreTurno() + '?')){
+      datos = viejos;
+      await guardar();
+      mostrarToast('Datos importados al ' + nombreTurno() + ' ✔');
+    }
+  }catch(e){ /* si falla, arranca vacío sin problema */ }
+}
+
 async function guardar(){
-  if (memoriaSolo) return;
+  if (memoriaSolo){ datosPorTurno[turno] = datos; return; }
+  if (!turno) return;
   try{
     const r = await fetch(SUPABASE_URL + '/rest/v1/kiosco_datos', {
       method: 'POST',
       headers: cabeceras({'Prefer': 'resolution=merge-duplicates'}),
-      body: JSON.stringify({ id: 'principal', datos: datos, actualizado: new Date().toISOString() })
+      body: JSON.stringify({ id: turno, datos: datos, actualizado: new Date().toISOString() })
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
   }catch(e){
@@ -639,7 +800,7 @@ function filasExport(){
 
 function exportarCSV(){
   const t = totales();
-  let csv = 'REPORTE DEL KIOSCO ESCOLAR;' + fechaCorta(Date.now()) + '\n';
+  let csv = 'REPORTE DEL KIOSCO ESCOLAR — ' + nombreTurno().toUpperCase() + ';' + fechaCorta(Date.now()) + '\n';
   csv += 'BALANCE (dinero disponible);' + t.balance + '\n';
   csv += 'Total recaudado;' + t.recaudado + '\n';
   csv += 'Fiado pendiente de cobro;' + t.fiadoPend + '\n';
@@ -650,7 +811,7 @@ function exportarCSV(){
     csv += f.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(';') + '\n';
   });
   const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
-  descargar(blob, 'kiosco-escolar-'+hoyArchivo()+'.csv');
+  descargar(blob, 'kiosco-' + turno + '-' + hoyArchivo() + '.csv');
   mostrarToast('CSV descargado ✔');
 }
 
@@ -669,7 +830,7 @@ function exportarPDF(){
   doc.rect(0, 0, 210, 28, 'F');
   doc.setTextColor(245, 242, 232);
   doc.setFontSize(18);
-  doc.text('Reporte del Kiosco Escolar', 14, 13);
+  doc.text('Reporte del Kiosco Escolar — ' + nombreTurno(), 14, 13);
   doc.setFontSize(10);
   doc.text('Generado el ' + hoy, 14, 21);
 
@@ -751,7 +912,7 @@ function exportarPDF(){
     styles: {fontSize:9}
   });
 
-  doc.save('kiosco-escolar-' + hoyArchivo() + '.pdf');
+  doc.save('kiosco-' + turno + '-' + hoyArchivo() + '.pdf');
   mostrarToast('PDF descargado ✔');
 }
 
@@ -793,7 +954,7 @@ document.querySelectorAll('nav button').forEach(b=>{
 document.getElementById('fechaHoy').textContent =
   new Date().toLocaleDateString('es-AR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
 
-cargar();
+/* La carga de datos se dispara recién cuando se elige el turno (elegirTurno). */
 </script>
 </body>
 </html>
