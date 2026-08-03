@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Kiosco Escolar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root{
+    --pizarron:#1F4D3E;
+    --pizarron-oscuro:#153629;
+    --tiza:#F5F2E8;
+    --madera:#8A5A33;
+    --maiz:#F2B33D;
+    --tinta:#22302B;
+    --fondo:#EFF2F0;
+    --papel:#FFFFFF;
+    --rojo:#C24B3A;
+    --verde-ok:#2E7D5B;
+    --gris:#7B8681;
+    --borde:#DCE2DE;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Nunito',system-ui,-apple-system,sans-serif;
+    background:var(--fondo);
+    color:var(--tinta);
+    min-height:100vh;
+  }
+  /* ---------- Encabezado tipo pizarrón ---------- */
+  header{
+    background:var(--pizarron);
+    background-image:radial-gradient(rgba(255,255,255,.04) 1px, transparent 1px);
+    background-size:14px 14px;
+    border-bottom:8px solid var(--madera);
+    padding:20px 16px 16px;
+    color:var(--tiza);
+    text-align:center;
+    position:relative;
+  }
+  header h1{
+    font-family:'Patrick Hand',cursive;
+    font-size:2rem;
+    letter-spacing:.03em;
+    text-shadow:0 1px 0 rgba(0,0,0,.25);
+  }
+  header p{
+    font-size:.85rem;
+    opacity:.85;
+  }
+  #fechaHoy{color:var(--maiz);font-weight:700}
+  /* ---------- Navegación ---------- */
+  nav{
+    display:flex;
+    background:var(--pizarron-oscuro);
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    position:sticky;
+    top:0;
+    z-index:40;
+  }
+  nav button{
+    flex:1;
+    min-width:80px;
+    min-height:48px;
+    padding:10px 6px;
+    background:none;
+    border:none;
+    border-bottom:3px solid transparent;
+    color:var(--tiza);
+    font-family:'Nunito',sans-serif;
+    font-weight:700;
+    font-size:.85rem;
+    cursor:pointer;
+    opacity:.7;
+    transition:opacity .15s, border-color .15s;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:2px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  nav button .ico{font-size:1.1rem;line-height:1}
+  nav button:focus-visible{outline:2px solid var(--maiz);outline-offset:-2px}
+  nav button.activo{opacity:1;border-bottom-color:var(--maiz)}
+  main{max-width:760px;margin:0 auto;padding:16px 12px 60px}
+  section{display:none}
+  section.visible{display:block;animation:aparecer .2s ease}
+  @keyframes aparecer{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){section.visible{animation:none}}
+  /* ---------- Tarjetas ---------- */
+  .tarjeta{
+    background:var(--papel);
+    border:1px solid var(--borde);
+    border-radius:10px;
+    padding:16px;
+    margin-bottom:14px;
+    box-shadow:0 1px 3px rgba(34,48,43,.06);
+  }
+  .tarjeta h2{
+    font-family:'Patrick Hand',cursive;
+    font-size:1.35rem;
+    color:var(--pizarron);
+    margin-bottom:10px;
+    border-bottom:2px dashed var(--borde);
+    padding-bottom:6px;
+  }
+  /* ---------- Resumen ---------- */
+  .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .kpi{
+    background:var(--papel);
+    border:1px solid var(--borde);
+    border-left:5px solid var(--pizarron);
+    border-radius:10px;
+    padding:12px;
+  }
+  .kpi.fiado{border-left-color:var(--maiz)}
+  .kpi.pedido{border-left-color:var(--rojo)}
+  .kpi.balance{border-left-color:var(--verde-ok)}
+  .kpi .etiqueta{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gris)}
+  .kpi .valor{font-size:1.35rem;font-weight:800;margin-top:2px}
+  .kpi .valor.negativo{color:var(--rojo)}
+  /* ---------- Formularios ---------- */
+  form{display:flex;flex-wrap:wrap;gap:8px}
+  input,select{
+    flex:1;
+    min-width:120px;
+    padding:11px 12px;
+    border:1px solid var(--borde);
+    border-radius:8px;
+    font-family:inherit;
+    font-size:1rem;
+    background:#FCFDFC;
+  }
+  input:focus,select:focus{outline:2px solid var(--pizarron);outline-offset:1px}
+  .btn{
+    padding:11px 18px;
+    border:none;
+    border-radius:8px;
+    font-family:inherit;
+    font-weight:800;
+    font-size:.95rem;
+    cursor:pointer;
+    background:var(--pizarron);
+    color:var(--tiza);
+    transition:filter .15s;
+  }
+  .btn:hover{filter:brightness(1.1)}
+  .btn:focus-visible{outline:2px solid var(--maiz);outline-offset:2px}
+  .btn-sec{background:var(--maiz);color:var(--tinta)}
+  .btn-peligro{background:none;color:var(--rojo);padding:4px 8px;font-size:.8rem}
+  .btn-mini{padding:6px 12px;font-size:.8rem;background:var(--verde-ok)}
+  /* ---------- Listas ---------- */
+  ul.registro{list-style:none}
+  ul.registro li{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    padding:10px 4px;
+    border-bottom:1px solid var(--borde);
+    flex-wrap:wrap;
+  }
+  ul.registro li:last-child{border-bottom:none}
+  .dato{flex:1;min-width:150px}
+  .dato .nombre{font-weight:700}
+  .dato .fecha{font-size:.75rem;color:var(--gris)}
+  .monto{font-weight:800;white-space:nowrap}
+  .monto.rojo{color:var(--rojo)}
+  .monto.verde{color:var(--verde-ok)}
+  .chip{
+    display:inline-block;
+    font-size:.7rem;
+    font-weight:800;
+    padding:2px 8px;
+    border-radius:20px;
+    background:#FCEED0;
+    color:#8A6414;
+  }
+  .chip.pagado{background:#DCEFE5;color:var(--verde-ok)}
+  .vacio{color:var(--gris);font-size:.9rem;padding:8px 4px}
+  .fila-export{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+  .aviso{
+    background:#FCEED0;
+    border:1px solid #E8CE93;
+    border-radius:8px;
+    padding:10px 12px;
+    font-size:.85rem;
+    margin-bottom:14px;
+    display:none;
+  }
+  .toast{
+    position:fixed;
+    bottom:16px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--tinta);
+    color:var(--tiza);
+    padding:10px 20px;
+    border-radius:30px;
+    font-weight:700;
+    font-size:.85rem;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s;
+    z-index:50;
+  }
+  .toast.ver{opacity:1}
+  /* ---------- Optimización para teléfonos ---------- */
+  @media (max-width:640px){
+    header{padding:14px 12px 12px}
+    header h1{font-size:1.55rem}
+    header p{font-size:.8rem}
+    main{padding:12px 10px calc(84px + env(safe-area-inset-bottom))}
+    /* Barra de navegación inferior tipo app */
+    nav{
+      position:fixed;
+      top:auto;
+      bottom:0;
+      left:0;
+      right:0;
+      border-top:1px solid rgba(255,255,255,.12);
+      padding-bottom:env(safe-area-inset-bottom);
+      box-shadow:0 -3px 12px rgba(0,0,0,.18);
+    }
+    nav button{
+      min-height:56px;
+      font-size:.72rem;
+      border-bottom:none;
+      border-top:3px solid transparent;
+    }
+    nav button .ico{font-size:1.35rem}
+    nav button.activo{border-top-color:var(--maiz);background:rgba(255,255,255,.06)}
+    /* Formularios apilados a lo ancho */
+    form{flex-direction:column}
+    input,select{width:100%;min-width:0;font-size:1rem;padding:13px 14px}
+    form .btn{width:100%;min-height:48px;font-size:1rem}
+    /* KPIs compactos */
+    .kpis{grid-template-columns:1fr 1fr;gap:8px}
+    .kpi{padding:10px}
+    .kpi .valor{font-size:1.15rem}
+    .kpi .etiqueta{font-size:.65rem}
+    /* Listas: datos arriba, acciones abajo con buen tamaño táctil */
+    ul.registro li{padding:12px 2px}
+    .dato{flex:1 1 100%;min-width:0}
+    .btn-mini{min-height:40px;padding:8px 16px;font-size:.85rem}
+    .btn-peligro{min-height:40px;padding:8px 12px;font-size:.85rem}
+    .monto{font-size:1.05rem}
+    /* Botones de exportación a lo ancho */
+    .fila-export{flex-direction:column}
+    .fila-export .btn{width:100%;min-height:48px}
+    .tarjeta{padding:14px 12px}
+    /* Toast por encima de la barra inferior */
+    .toast{bottom:calc(76px + env(safe-area-inset-bottom));max-width:88vw;text-align:center}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🏪 Kiosco Escolar</h1>
+  <p>Hoy es <span id="fechaHoy"></span></p>
+</header>
+
+<nav>
+  <button class="activo" data-tab="resumen"><span class="ico">📋</span>Resumen</button>
+  <button data-tab="recaudacion"><span class="ico">💰</span>Recaudación</button>
+  <button data-tab="fiados"><span class="ico">📒</span>Fiados</button>
+  <button data-tab="pedidos"><span class="ico">📦</span>Pedidos</button>
+</nav>
+
+<main>
+  <div class="aviso" id="avisoMemoria">
+    ⚠️ El guardado permanente no está disponible en este entorno: los datos se mantienen solo mientras la página esté abierta.
+  </div>
+
+  <!-- ================= RESUMEN ================= -->
+  <section id="resumen" class="visible">
+    <div class="kpis">
+      <div class="kpi">
+        <div class="etiqueta">Recaudado</div>
+        <div class="valor" id="kpiRecaudado">$0</div>
+      </div>
+      <div class="kpi fiado">
+        <div class="etiqueta">Fiado pendiente</div>
+        <div class="valor" id="kpiFiado">$0</div>
+      </div>
+      <div class="kpi pedido">
+        <div class="etiqueta">Pagado en pedidos</div>
+        <div class="valor" id="kpiPedidos">$0</div>
+      </div>
+      <div class="kpi balance">
+        <div class="etiqueta">Balance</div>
+        <div class="valor" id="kpiBalance">$0</div>
+      </div>
+    </div>
+
+    <div class="tarjeta" style="margin-top:14px">
+      <h2>Exportar reporte</h2>
+      <p style="font-size:.85rem;color:var(--gris);margin-bottom:10px">
+        Descargá todos los movimientos del kiosco para archivar o presentar.
+      </p>
+      <div class="fila-export">
+        <button class="btn" onclick="exportarPDF()">📄 Descargar PDF</button>
+        <button class="btn btn-sec" onclick="exportarCSV()">📊 Descargar CSV (Excel)</button>
+      </div>
+    </div>
+
+    <div class="tarjeta">
+      <h2>Últimos movimientos</h2>
+      <ul class="registro" id="listaMovimientos"></ul>
+    </div>
+  </section>
+
+  <!-- ================= RECAUDACIÓN ================= -->
+  <section id="recaudacion">
+    <div class="tarjeta">
+      <h2>Cargar recaudación del día</h2>
+      <form id="formRecaudacion">
+        <input type="number" id="montoRecaudacion" placeholder="Monto ($)" min="1" step="0.01" inputmode="decimal" required>
+        <input type="text" id="notaRecaudacion" placeholder="Nota (opcional)">
+        <button class="btn" type="submit">Guardar</button>
+      </form>
+    </div>
+    <div class="tarjeta">
+      <h2>Historial de recaudación</h2>
+      <ul class="registro" id="listaRecaudacion"></ul>
+    </div>
+  </section>
+
+  <!-- ================= FIADOS ================= -->
+  <section id="fiados">
+    <div class="tarjeta">
+      <h2>Anotar un fiado</h2>
+      <form id="formFiado">
+        <input type="text" id="nombreFiado" placeholder="Nombre" required>
+        <input type="number" id="montoFiado" placeholder="Monto ($)" min="1" step="0.01" inputmode="decimal" required>
+        <button class="btn" type="submit">Anotar</button>
+      </form>
+    </div>
+    <div class="tarjeta">
+      <h2>Fiados pendientes</h2>
+      <ul class="registro" id="listaFiadosPendientes"></ul>
+    </div>
+    <div class="tarjeta">
+      <h2>Fiados pagados</h2>
+      <ul class="registro" id="listaFiadosPagados"></ul>
+    </div>
+  </section>
+
+  <!-- ================= PEDIDOS ================= -->
+  <section id="pedidos">
+    <div class="tarjeta">
+      <h2>Registrar pago de pedido</h2>
+      <form id="formPedido">
+        <input type="text" id="descPedido" placeholder="Descripción (proveedor, mercadería...)" required>
+        <input type="number" id="montoPedido" placeholder="Monto ($)" min="1" step="0.01" inputmode="decimal" required>
+        <button class="btn" type="submit">Registrar</button>
+      </form>
+    </div>
+    <div class="tarjeta">
+      <h2>Historial de pedidos pagados</h2>
+      <ul class="registro" id="listaPedidos"></ul>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   CONFIGURACIÓN — Pegá acá tus datos de Supabase
+   (botón "Connect" arriba del panel, o Project Settings → API Keys)
+========================================================= */
+const SUPABASE_URL = 'https://lfksbqohhpyvunkmhtge.supabase.co';   // ej: https://abcdefgh.supabase.co
+const SUPABASE_KEY = 'sb_publishable_4tEkUHgIe3V9581m2QGPbw_7IlMKiNR';      // publishable key (sb_publishable_...) o anon key (eyJ...)
+
+/* =========================================================
+   Estado y persistencia
+========================================================= */
+let datos = { recaudaciones: [], fiados: [], pedidos: [] };
+let memoriaSolo = false;
+
+function configurada(){
+  return SUPABASE_URL.startsWith('https://') && SUPABASE_KEY.length > 30;
+}
+function cabeceras(extra){
+  return Object.assign({
+    'apikey': SUPABASE_KEY,
+    'Authorization': 'Bearer ' + SUPABASE_KEY,
+    'Content-Type': 'application/json'
+  }, extra || {});
+}
+
+function fmt(n){
+  return '$' + Number(n).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:2});
+}
+function fechaLegible(ts){
+  return new Date(ts).toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit', year:'numeric'})
+    + ' ' + new Date(ts).toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+}
+function fechaCorta(ts){
+  return new Date(ts).toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit', year:'numeric'});
+}
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+async function cargar(){
+  if (!configurada()){
+    memoriaSolo = true;
+    const aviso = document.getElementById('avisoMemoria');
+    aviso.textContent = '⚠️ Falta configurar Supabase: abrí index.html y pegá tu URL y tu anon key donde dice CONFIGURACIÓN. Mientras tanto, los datos solo duran mientras la página esté abierta.';
+    aviso.style.display = 'block';
+    render();
+    return;
+  }
+  try{
+    const r = await fetch(SUPABASE_URL + '/rest/v1/kiosco_datos?id=eq.principal&select=datos', {
+      headers: cabeceras()
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    if (Array.isArray(j) && j.length && j[0].datos) datos = j[0].datos;
+  }catch(e){
+    mostrarToast('No se pudo conectar a la base de datos');
+  }
+  render();
+}
+
+async function guardar(){
+  if (memoriaSolo) return;
+  try{
+    const r = await fetch(SUPABASE_URL + '/rest/v1/kiosco_datos', {
+      method: 'POST',
+      headers: cabeceras({'Prefer': 'resolution=merge-duplicates'}),
+      body: JSON.stringify({ id: 'principal', datos: datos, actualizado: new Date().toISOString() })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+  }catch(e){
+    mostrarToast('No se pudo guardar. Revisá tu conexión.');
+  }
+}
+
+/* =========================================================
+   Cálculos
+========================================================= */
+function saldoFiado(f){
+  const pagado = (f.pagos || []).reduce((a,p)=>a+p.monto, 0);
+  return Math.max(f.monto - pagado, 0);
+}
+function totales(){
+  const rec = datos.recaudaciones.reduce((a,r)=>a+r.monto, 0);
+  const cobrosFiados = datos.fiados.flatMap(f=>f.pagos||[]).reduce((a,p)=>a+p.monto, 0);
+  const fiadoPend = datos.fiados.reduce((a,f)=>a+saldoFiado(f), 0);
+  const ped = datos.pedidos.reduce((a,p)=>a+p.monto, 0);
+  const recaudado = rec + cobrosFiados;
+  return { recaudado, fiadoPend, ped, balance: recaudado - ped };
+}
+
+/* =========================================================
+   Render
+========================================================= */
+function render(){
+  const t = totales();
+  document.getElementById('kpiRecaudado').textContent = fmt(t.recaudado);
+  document.getElementById('kpiFiado').textContent = fmt(t.fiadoPend);
+  document.getElementById('kpiPedidos').textContent = fmt(t.ped);
+  const elBal = document.getElementById('kpiBalance');
+  elBal.textContent = fmt(t.balance);
+  elBal.classList.toggle('negativo', t.balance < 0);
+
+  renderRecaudacion();
+  renderFiados();
+  renderPedidos();
+  renderMovimientos();
+}
+
+function itemVacio(texto){
+  return '<li class="vacio">' + texto + '</li>';
+}
+
+function renderRecaudacion(){
+  const ul = document.getElementById('listaRecaudacion');
+  if (!datos.recaudaciones.length){ ul.innerHTML = itemVacio('Todavía no cargaste ninguna recaudación.'); return; }
+  ul.innerHTML = [...datos.recaudaciones].sort((a,b)=>b.fecha-a.fecha).map(r=>`
+    <li>
+      <div class="dato">
+        <div class="nombre">${r.nota ? escapar(r.nota) : 'Recaudación del día'}</div>
+        <div class="fecha">${fechaLegible(r.fecha)}</div>
+      </div>
+      <span class="monto verde">${fmt(r.monto)}</span>
+      <button class="btn btn-peligro" onclick="borrar('recaudaciones','${r.id}')">Borrar</button>
+    </li>`).join('');
+}
+
+function renderFiados(){
+  const pend = datos.fiados.filter(f=>saldoFiado(f) > 0);
+  const pag = datos.fiados.filter(f=>saldoFiado(f) === 0);
+  const ulP = document.getElementById('listaFiadosPendientes');
+  const ulOk = document.getElementById('listaFiadosPagados');
+
+  if (!pend.length) ulP.innerHTML = itemVacio('No hay fiados pendientes. 🎉');
+  else ulP.innerHTML = [...pend].sort((a,b)=>b.fecha-a.fecha).map(f=>`
+    <li>
+      <div class="dato">
+        <div class="nombre">${escapar(f.nombre)} <span class="chip">Debe ${fmt(saldoFiado(f))}</span></div>
+        <div class="fecha">Fiado ${fmt(f.monto)} · ${fechaLegible(f.fecha)}</div>
+      </div>
+      <button class="btn btn-mini" onclick="cobrarFiado('${f.id}')">Cobrar</button>
+      <button class="btn btn-peligro" onclick="borrar('fiados','${f.id}')">Borrar</button>
+    </li>`).join('');
+
+  if (!pag.length) ulOk.innerHTML = itemVacio('Todavía no hay fiados saldados.');
+  else ulOk.innerHTML = [...pag].sort((a,b)=>b.fecha-a.fecha).map(f=>`
+    <li>
+      <div class="dato">
+        <div class="nombre">${escapar(f.nombre)} <span class="chip pagado">Pagado</span></div>
+        <div class="fecha">Fiado ${fmt(f.monto)} · ${fechaLegible(f.fecha)}</div>
+      </div>
+      <span class="monto verde">${fmt(f.monto)}</span>
+      <button class="btn btn-peligro" onclick="borrar('fiados','${f.id}')">Borrar</button>
+    </li>`).join('');
+}
+
+function renderPedidos(){
+  const ul = document.getElementById('listaPedidos');
+  if (!datos.pedidos.length){ ul.innerHTML = itemVacio('Todavía no registraste pagos de pedidos.'); return; }
+  ul.innerHTML = [...datos.pedidos].sort((a,b)=>b.fecha-a.fecha).map(p=>`
+    <li>
+      <div class="dato">
+        <div class="nombre">${escapar(p.desc)}</div>
+        <div class="fecha">${fechaLegible(p.fecha)}</div>
+      </div>
+      <span class="monto rojo">−${fmt(p.monto)}</span>
+      <button class="btn btn-peligro" onclick="borrar('pedidos','${p.id}')">Borrar</button>
+    </li>`).join('');
+}
+
+function renderMovimientos(){
+  const movs = [
+    ...datos.recaudaciones.map(r=>({fecha:r.fecha, texto:r.nota||'Recaudación', monto:r.monto, tipo:'verde'})),
+    ...datos.fiados.map(f=>({fecha:f.fecha, texto:'Fiado: '+f.nombre, monto:f.monto, tipo:'amarillo'})),
+    ...datos.fiados.flatMap(f=>(f.pagos||[]).map(p=>({fecha:p.fecha, texto:'Pago de fiado: '+f.nombre, monto:p.monto, tipo:'verde'}))),
+    ...datos.pedidos.map(p=>({fecha:p.fecha, texto:'Pedido: '+p.desc, monto:p.monto, tipo:'rojo'}))
+  ].sort((a,b)=>b.fecha-a.fecha).slice(0,8);
+
+  const ul = document.getElementById('listaMovimientos');
+  if (!movs.length){ ul.innerHTML = itemVacio('Cuando cargues movimientos, van a aparecer acá.'); return; }
+  ul.innerHTML = movs.map(m=>`
+    <li>
+      <div class="dato">
+        <div class="nombre">${escapar(m.texto)}</div>
+        <div class="fecha">${fechaLegible(m.fecha)}</div>
+      </div>
+      <span class="monto ${m.tipo==='rojo'?'rojo':(m.tipo==='verde'?'verde':'')}">${m.tipo==='rojo'?'−':''}${fmt(m.monto)}</span>
+    </li>`).join('');
+}
+
+function escapar(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+/* =========================================================
+   Acciones
+========================================================= */
+document.getElementById('formRecaudacion').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const monto = parseFloat(document.getElementById('montoRecaudacion').value);
+  const nota = document.getElementById('notaRecaudacion').value.trim();
+  if (!(monto > 0)) return;
+  datos.recaudaciones.push({id:uid(), monto, nota, fecha:Date.now()});
+  e.target.reset();
+  await guardar(); render(); mostrarToast('Recaudación guardada ✔');
+});
+
+document.getElementById('formFiado').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const nombre = document.getElementById('nombreFiado').value.trim();
+  const monto = parseFloat(document.getElementById('montoFiado').value);
+  if (!nombre || !(monto > 0)) return;
+  datos.fiados.push({id:uid(), nombre, monto, pagos:[], fecha:Date.now()});
+  e.target.reset();
+  await guardar(); render(); mostrarToast('Fiado anotado ✔');
+});
+
+document.getElementById('formPedido').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const desc = document.getElementById('descPedido').value.trim();
+  const monto = parseFloat(document.getElementById('montoPedido').value);
+  if (!desc || !(monto > 0)) return;
+  datos.pedidos.push({id:uid(), desc, monto, fecha:Date.now()});
+  e.target.reset();
+  await guardar(); render(); mostrarToast('Pedido registrado ✔');
+});
+
+async function cobrarFiado(id){
+  const f = datos.fiados.find(x=>x.id===id);
+  if (!f) return;
+  const saldo = saldoFiado(f);
+  const entrada = prompt(`${f.nombre} debe ${fmt(saldo)}.\n¿Cuánto paga? (Aceptar sin cambiar = paga todo)`, saldo);
+  if (entrada === null) return;
+  let monto = parseFloat(String(entrada).replace(',', '.'));
+  if (!(monto > 0)) return mostrarToast('Monto inválido');
+  if (monto > saldo) monto = saldo;
+  f.pagos = f.pagos || [];
+  f.pagos.push({monto, fecha:Date.now()});
+  await guardar(); render();
+  mostrarToast(saldoFiado(f)===0 ? 'Fiado saldado ✔' : 'Pago parcial registrado ✔');
+}
+
+async function borrar(lista, id){
+  if (!confirm('¿Borrar este registro? No se puede deshacer.')) return;
+  datos[lista] = datos[lista].filter(x=>x.id!==id);
+  await guardar(); render(); mostrarToast('Registro borrado');
+}
+
+/* =========================================================
+   Exportar CSV
+========================================================= */
+function filasExport(){
+  const filas = [];
+  datos.recaudaciones.forEach(r=>filas.push(['Recaudación', fechaCorta(r.fecha), r.nota||'-', r.monto, '-']));
+  datos.fiados.forEach(f=>{
+    filas.push(['Fiado', fechaCorta(f.fecha), f.nombre, f.monto, saldoFiado(f)===0?'Pagado':('Debe '+fmt(saldoFiado(f)))]);
+    (f.pagos||[]).forEach(p=>filas.push(['Pago de fiado', fechaCorta(p.fecha), f.nombre, p.monto, '-']));
+  });
+  datos.pedidos.forEach(p=>filas.push(['Pedido', fechaCorta(p.fecha), p.desc, p.monto, '-']));
+  filas.sort((a,b)=>{
+    const pa = a[1].split('/').reverse().join(''), pb = b[1].split('/').reverse().join('');
+    return pa.localeCompare(pb);
+  });
+  return filas;
+}
+
+function exportarCSV(){
+  const t = totales();
+  let csv = 'REPORTE DEL KIOSCO ESCOLAR;' + fechaCorta(Date.now()) + '\n';
+  csv += 'BALANCE (dinero disponible);' + t.balance + '\n';
+  csv += 'Total recaudado;' + t.recaudado + '\n';
+  csv += 'Fiado pendiente de cobro;' + t.fiadoPend + '\n';
+  csv += 'Pagado en pedidos;' + t.ped + '\n';
+  csv += '\n';
+  csv += 'Tipo;Fecha;Detalle;Monto;Estado\n';
+  filasExport().forEach(f=>{
+    csv += f.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(';') + '\n';
+  });
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  descargar(blob, 'kiosco-escolar-'+hoyArchivo()+'.csv');
+  mostrarToast('CSV descargado ✔');
+}
+
+/* =========================================================
+   Exportar PDF
+========================================================= */
+function exportarPDF(){
+  if (!window.jspdf){ mostrarToast('No se pudo cargar el generador de PDF'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const t = totales();
+  const hoy = new Date().toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit', year:'numeric'});
+
+  // Encabezado
+  doc.setFillColor(31, 77, 62);
+  doc.rect(0, 0, 210, 28, 'F');
+  doc.setTextColor(245, 242, 232);
+  doc.setFontSize(18);
+  doc.text('Reporte del Kiosco Escolar', 14, 13);
+  doc.setFontSize(10);
+  doc.text('Generado el ' + hoy, 14, 21);
+
+  // Balance destacado: lo primero que se ve
+  const positivo = t.balance >= 0;
+  if (positivo) doc.setFillColor(46, 125, 91); else doc.setFillColor(194, 75, 58);
+  doc.roundedRect(14, 34, 182, 22, 3, 3, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.text('BALANCE · DINERO DISPONIBLE', 20, 42);
+  doc.setFontSize(19);
+  doc.text(fmt(t.balance), 20, 51);
+
+  // Resumen
+  doc.setTextColor(34, 48, 43);
+  doc.setFontSize(13);
+  doc.text('Resumen general', 14, 66);
+  doc.autoTable({
+    startY: 70,
+    head: [['Concepto', 'Monto']],
+    body: [
+      ['Balance', fmt(t.balance)],
+      ['Total recaudado', fmt(t.recaudado)],
+      ['Fiado pendiente de cobro', fmt(t.fiadoPend)],
+      ['Pagado en pedidos', fmt(t.ped)]
+    ],
+    theme: 'grid',
+    headStyles: {fillColor:[31,77,62]},
+    styles: {fontSize:10}
+  });
+
+  // Recaudaciones
+  let y = doc.lastAutoTable.finalY + 10;
+  doc.setFontSize(13);
+  doc.text('Recaudación diaria', 14, y);
+  doc.autoTable({
+    startY: y + 4,
+    head: [['Fecha', 'Nota', 'Monto']],
+    body: datos.recaudaciones.length
+      ? [...datos.recaudaciones].sort((a,b)=>a.fecha-b.fecha).map(r=>[fechaCorta(r.fecha), r.nota||'-', fmt(r.monto)])
+      : [['-', 'Sin registros', '-']],
+    theme: 'striped',
+    headStyles: {fillColor:[31,77,62]},
+    styles: {fontSize:9}
+  });
+
+  // Fiados
+  y = doc.lastAutoTable.finalY + 10;
+  if (y > 250){ doc.addPage(); y = 20; }
+  doc.setFontSize(13);
+  doc.text('Fiados', 14, y);
+  doc.autoTable({
+    startY: y + 4,
+    head: [['Fecha', 'Nombre', 'Monto', 'Estado']],
+    body: datos.fiados.length
+      ? [...datos.fiados].sort((a,b)=>a.fecha-b.fecha).map(f=>[
+          fechaCorta(f.fecha), f.nombre, fmt(f.monto),
+          saldoFiado(f)===0 ? 'Pagado' : 'Debe ' + fmt(saldoFiado(f))
+        ])
+      : [['-', 'Sin registros', '-', '-']],
+    theme: 'striped',
+    headStyles: {fillColor:[242,179,61], textColor:[34,48,43]},
+    styles: {fontSize:9}
+  });
+
+  // Pedidos
+  y = doc.lastAutoTable.finalY + 10;
+  if (y > 250){ doc.addPage(); y = 20; }
+  doc.setFontSize(13);
+  doc.text('Pagos de pedidos', 14, y);
+  doc.autoTable({
+    startY: y + 4,
+    head: [['Fecha', 'Descripción', 'Monto']],
+    body: datos.pedidos.length
+      ? [...datos.pedidos].sort((a,b)=>a.fecha-b.fecha).map(p=>[fechaCorta(p.fecha), p.desc, fmt(p.monto)])
+      : [['-', 'Sin registros', '-']],
+    theme: 'striped',
+    headStyles: {fillColor:[194,75,58]},
+    styles: {fontSize:9}
+  });
+
+  doc.save('kiosco-escolar-' + hoyArchivo() + '.pdf');
+  mostrarToast('PDF descargado ✔');
+}
+
+/* =========================================================
+   Utilidades
+========================================================= */
+function hoyArchivo(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function descargar(blob, nombre){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = nombre;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+let toastTimer;
+function mostrarToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('ver');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('ver'), 2200);
+}
+
+/* Navegación por pestañas */
+document.querySelectorAll('nav button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    document.querySelectorAll('nav button').forEach(x=>x.classList.remove('activo'));
+    document.querySelectorAll('main section').forEach(x=>x.classList.remove('visible'));
+    b.classList.add('activo');
+    document.getElementById(b.dataset.tab).classList.add('visible');
+    window.scrollTo({top:0, behavior:'auto'});
+  });
+});
+
+/* Fecha del encabezado */
+document.getElementById('fechaHoy').textContent =
+  new Date().toLocaleDateString('es-AR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+cargar();
+</script>
+</body>
+</html>
