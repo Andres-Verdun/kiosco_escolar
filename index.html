@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
   :root{
     --pizarron:#1F4D3E;
@@ -210,8 +211,8 @@
     z-index:50;
   }
   .toast.ver{opacity:1}
-  /* ---------- Selección de turno ---------- */
-  #pantallaTurno{
+  /* ---------- Pantallas completas: login / acceso denegado / turno ---------- */
+  .pantalla-completa{
     position:fixed;
     inset:0;
     z-index:100;
@@ -226,14 +227,42 @@
     padding:24px;
     text-align:center;
   }
-  #pantallaTurno.oculta{display:none}
-  #pantallaTurno h1{
+  .pantalla-completa.oculta{display:none}
+  .pantalla-completa h1{
     font-family:'Patrick Hand',cursive;
     font-size:2.2rem;
     color:var(--tiza);
     text-shadow:0 1px 0 rgba(0,0,0,.25);
   }
-  #pantallaTurno p{color:var(--tiza);opacity:.85;font-size:1rem;margin-top:-14px}
+  .pantalla-completa p{color:var(--tiza);opacity:.85;font-size:1rem;margin-top:-14px}
+  .btn-google{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    background:var(--papel);
+    color:var(--tinta);
+    border:none;
+    border-radius:10px;
+    padding:14px 24px;
+    font-family:'Nunito',sans-serif;
+    font-weight:800;
+    font-size:1rem;
+    cursor:pointer;
+    box-shadow:0 4px 12px rgba(0,0,0,.25);
+    transition:transform .12s, filter .12s;
+  }
+  .btn-google:hover{transform:translateY(-2px);filter:brightness(1.03)}
+  .btn-google:focus-visible{outline:3px solid var(--maiz);outline-offset:3px}
+  .email-denegado{
+    font-family:'Nunito',sans-serif;
+    font-weight:700;
+    color:var(--maiz);
+    background:rgba(255,255,255,.1);
+    padding:4px 12px;
+    border-radius:20px;
+    display:inline-block;
+  }
   .botones-turno{
     display:flex;
     gap:16px;
@@ -345,8 +374,26 @@
 </head>
 <body>
 
+<!-- ================= LOGIN ================= -->
+<div id="pantallaLogin" class="pantalla-completa">
+  <h1>🏪 Kiosco Escolar</h1>
+  <p>Acceso restringido. Iniciá sesión con tu cuenta de Google autorizada.</p>
+  <button class="btn-google" onclick="iniciarSesionGoogle()">
+    <span aria-hidden="true">🔐</span> Iniciar sesión con Google
+  </button>
+  <p id="avisoLogin" style="display:none;color:var(--rojo);opacity:1;font-weight:700;margin-top:0"></p>
+</div>
+
+<!-- ================= ACCESO DENEGADO ================= -->
+<div id="pantallaDenegado" class="pantalla-completa oculta">
+  <h1>🚫 Sin autorización</h1>
+  <p>La cuenta <span class="email-denegado" id="emailDenegado"></span> no está habilitada para usar el kiosco.</p>
+  <p>Pedile a quien administra el sistema que agregue tu email a la lista de autorizados.</p>
+  <button class="btn-google" onclick="cerrarSesion()">Cerrar sesión</button>
+</div>
+
 <!-- ================= SELECCIÓN DE TURNO ================= -->
-<div id="pantallaTurno">
+<div id="pantallaTurno" class="pantalla-completa oculta">
   <h1>🏪 Kiosco Escolar</h1>
   <p>¿Con qué caja vas a trabajar?</p>
   <div class="botones-turno">
@@ -369,6 +416,10 @@
   <div class="chip-turno" id="chipTurno" style="display:none">
     <span id="etiquetaTurno"></span>
     <button onclick="cambiarTurno()">Cambiar</button>
+  </div>
+  <div class="chip-turno" id="chipUsuario" style="display:none">
+    <span id="etiquetaUsuario"></span>
+    <button onclick="cerrarSesion()">Cerrar sesión</button>
   </div>
 </header>
 
@@ -485,6 +536,11 @@
 const SUPABASE_URL = 'https://lfksbqohhpyvunkmhtge.supabase.co';   // ej: https://abcdefgh.supabase.co
 const SUPABASE_KEY = 'sb_publishable_4tEkUHgIe3V9581m2QGPbw_7IlMKiNR';      // publishable key (sb_publishable_...) o anon key (eyJ...)
 
+// Cliente de Supabase (auth + datos). Usar SIEMPRE este cliente para leer/escribir
+// datos, así las consultas viajan con el token de sesión del usuario logueado y
+// las políticas RLS del servidor pueden verificar quién es.
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 /* =========================================================
    Estado y persistencia
 ========================================================= */
@@ -492,6 +548,76 @@ let datos = { recaudaciones: [], fiados: [], pedidos: [] };
 let memoriaSolo = false;
 let turno = null; // 'manana' | 'tarde'
 let datosPorTurno = { manana: null, tarde: null }; // caché en memoria si Supabase no está configurado
+let sesionEmail = null;
+
+/* =========================================================
+   Autenticación (Google vía Supabase Auth)
+========================================================= */
+async function iniciarSesionGoogle(){
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin + window.location.pathname }
+  });
+  if (error){
+    const aviso = document.getElementById('avisoLogin');
+    aviso.textContent = 'No se pudo iniciar el login: ' + error.message;
+    aviso.style.display = 'block';
+  }
+}
+
+async function cerrarSesion(){
+  if (turno && memoriaSolo) datosPorTurno[turno] = datos;
+  await sb.auth.signOut();
+}
+
+// Consulta si el email logueado está en la tabla "autorizados". Gracias a la
+// política RLS de esa tabla, cada usuario solo puede ver su propia fila (o
+// ninguna si no está autorizado) — nunca la lista completa de emails.
+async function estaAutorizado(){
+  try{
+    const { data, error } = await sb.from('autorizados').select('email').limit(1);
+    if (error) return false; // ante cualquier error, no se otorga acceso
+    return Array.isArray(data) && data.length > 0;
+  }catch(e){
+    return false;
+  }
+}
+
+function mostrarPantalla(id){
+  ['pantallaLogin','pantallaDenegado','pantallaTurno'].forEach(p=>{
+    document.getElementById(p).classList.toggle('oculta', p !== id);
+  });
+}
+
+async function manejarSesion(session){
+  const chipUsuario = document.getElementById('chipUsuario');
+  if (!session || !session.user){
+    sesionEmail = null;
+    chipUsuario.style.display = 'none';
+    document.getElementById('chipTurno').style.display = 'none';
+    mostrarPantalla('pantallaLogin');
+    return;
+  }
+  sesionEmail = session.user.email;
+  const autorizado = await estaAutorizado();
+  if (!autorizado){
+    document.getElementById('emailDenegado').textContent = sesionEmail;
+    chipUsuario.style.display = 'none';
+    mostrarPantalla('pantallaDenegado');
+    return;
+  }
+  document.getElementById('etiquetaUsuario').textContent = '👤 ' + sesionEmail;
+  chipUsuario.style.display = 'inline-flex';
+  // Si ya había un turno elegido en esta misma sesión de navegación, no volver
+  // a pedirlo; si no, mostrar la pantalla de selección de turno.
+  if (!turno) mostrarPantalla('pantallaTurno');
+}
+
+async function initAuth(){
+  const { data: { session } } = await sb.auth.getSession();
+  await manejarSesion(session);
+  sb.auth.onAuthStateChange((_evento, session) => { manejarSesion(session); });
+}
 
 function nombreTurno(t){
   return (t || turno) === 'manana' ? 'Turno Mañana' : 'Turno Tarde';
@@ -522,13 +648,6 @@ function cambiarTurno(){
 function configurada(){
   return SUPABASE_URL.startsWith('https://') && SUPABASE_KEY.length > 30;
 }
-function cabeceras(extra){
-  return Object.assign({
-    'apikey': SUPABASE_KEY,
-    'Authorization': 'Bearer ' + SUPABASE_KEY,
-    'Content-Type': 'application/json'
-  }, extra || {});
-}
 
 function fmt(n){
   return '$' + Number(n).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:2});
@@ -554,13 +673,10 @@ async function cargar(){
     return;
   }
   try{
-    const r = await fetch(SUPABASE_URL + '/rest/v1/kiosco_datos?id=eq.' + turno + '&select=datos', {
-      headers: cabeceras()
-    });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const j = await r.json();
-    if (Array.isArray(j) && j.length && j[0].datos){
-      datos = j[0].datos;
+    const { data, error } = await sb.from('kiosco_datos').select('datos').eq('id', turno).limit(1);
+    if (error) throw error;
+    if (Array.isArray(data) && data.length && data[0].datos){
+      datos = data[0].datos;
     } else {
       // No hay datos para este turno todavía: si existen datos viejos en
       // 'principal' (versión anterior sin turnos), ofrezco importarlos.
@@ -574,12 +690,9 @@ async function cargar(){
 
 async function migrarDesdePrincipal(){
   try{
-    const r = await fetch(SUPABASE_URL + '/rest/v1/kiosco_datos?id=eq.principal&select=datos', {
-      headers: cabeceras()
-    });
-    if (!r.ok) return;
-    const j = await r.json();
-    const viejos = Array.isArray(j) && j.length ? j[0].datos : null;
+    const { data, error } = await sb.from('kiosco_datos').select('datos').eq('id', 'principal').limit(1);
+    if (error || !Array.isArray(data) || !data.length) return;
+    const viejos = data[0].datos;
     const hayAlgo = viejos && ((viejos.recaudaciones||[]).length || (viejos.fiados||[]).length || (viejos.pedidos||[]).length);
     if (!hayAlgo) return;
     if (confirm('Se encontraron datos de la versión anterior (sin turnos).\n¿Querés importarlos a la caja del ' + nombreTurno() + '?')){
@@ -594,12 +707,9 @@ async function guardar(){
   if (memoriaSolo){ datosPorTurno[turno] = datos; return; }
   if (!turno) return;
   try{
-    const r = await fetch(SUPABASE_URL + '/rest/v1/kiosco_datos', {
-      method: 'POST',
-      headers: cabeceras({'Prefer': 'resolution=merge-duplicates'}),
-      body: JSON.stringify({ id: turno, datos: datos, actualizado: new Date().toISOString() })
-    });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const { error } = await sb.from('kiosco_datos')
+      .upsert({ id: turno, datos: datos, actualizado: new Date().toISOString() });
+    if (error) throw error;
   }catch(e){
     mostrarToast('No se pudo guardar. Revisá tu conexión.');
   }
@@ -954,7 +1064,10 @@ document.querySelectorAll('nav button').forEach(b=>{
 document.getElementById('fechaHoy').textContent =
   new Date().toLocaleDateString('es-AR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
 
-/* La carga de datos se dispara recién cuando se elige el turno (elegirTurno). */
+/* Todo arranca con el chequeo de sesión: sin login autorizado no se ve nada
+   de la app. Recién cuando initAuth confirma la sesión se muestra la
+   selección de turno, y ahí se dispara la carga de datos (elegirTurno). */
+initAuth();
 </script>
 </body>
 </html>
