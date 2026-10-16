@@ -53,6 +53,9 @@
     opacity:.85;
   }
   #fechaHoy{color:var(--maiz);font-weight:700}
+  header h1.titulo-con-flor{display:flex;align-items:center;justify-content:center;gap:10px}
+  .margarita-header{width:40px;height:40px;flex-shrink:0}
+  @media(max-width:640px){.margarita-header{width:34px;height:34px}}
   /* ---------- Navegación ---------- */
   nav{
     display:flex;
@@ -426,7 +429,7 @@
 </div>
 
 <header>
-  <h1>🏪 Kiosco Escolar</h1>
+  <h1 class="titulo-con-flor"><svg class="margarita-header" viewBox="0 0 64 64" role="img" aria-label="Margarita" xmlns="http://www.w3.org/2000/svg"><g fill="#F5F2E8" stroke="#1F4D3E" stroke-width="1.2"><ellipse cx="32" cy="13" rx="7.5" ry="12" transform="rotate(0 32 32)"/><ellipse cx="32" cy="13" rx="7.5" ry="12" transform="rotate(45 32 32)"/><ellipse cx="32" cy="13" rx="7.5" ry="12" transform="rotate(90 32 32)"/><ellipse cx="32" cy="13" rx="7.5" ry="12" transform="rotate(135 32 32)"/><ellipse cx="32" cy="13" rx="7.5" ry="12" transform="rotate(180 32 32)"/><ellipse cx="32" cy="13" rx="7.5" ry="12" transform="rotate(225 32 32)"/><ellipse cx="32" cy="13" rx="7.5" ry="12" transform="rotate(270 32 32)"/><ellipse cx="32" cy="13" rx="7.5" ry="12" transform="rotate(315 32 32)"/></g><circle cx="32" cy="32" r="12" fill="#F2B33D" stroke="#1F4D3E" stroke-width="1.5"/><ellipse cx="28" cy="28" rx="3" ry="2" transform="rotate(-30 28 28)" fill="#FFE2A1"/></svg><span>Kiosco Escolar</span></h1>
   <p>Hoy es <span id="fechaHoy"></span></p>
   <div class="chip-turno" id="chipTurno" style="display:none">
     <span id="etiquetaTurno"></span>
