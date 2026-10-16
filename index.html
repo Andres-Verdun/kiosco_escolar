@@ -298,6 +298,10 @@
   .btn-turno .sub{font-size:.8rem;font-weight:600;color:var(--gris)}
   .btn-turno.manana{border-bottom:6px solid var(--maiz)}
   .btn-turno.tarde{border-bottom:6px solid var(--madera)}
+  /* Identidad visual: media margarita de Kiosco Escola 360 */
+  .marca-margarita{display:block;width:92px;height:56px;margin:0 auto 8px;overflow:visible}
+  .pantalla-completa .marca-margarita + h1{margin:0}
+  #pantallaTurno .marca-margarita{flex-shrink:0}
   /* Indicador de turno en el header */
   .chip-turno{
     display:inline-flex;
@@ -394,7 +398,18 @@
 
 <!-- ================= SELECCIÓN DE TURNO ================= -->
 <div id="pantallaTurno" class="pantalla-completa oculta">
-  <h1>🏪 Kiosco Escolar</h1>
+  <svg class="marca-margarita" viewBox="0 0 120 75" role="img" aria-label="Media margarita decorativa" xmlns="http://www.w3.org/2000/svg">
+    <g fill="#F5F2E8" stroke="#1F4D3E" stroke-width="2">
+      <ellipse cx="60" cy="24" rx="12" ry="23"/>
+      <ellipse cx="34" cy="32" rx="12" ry="23" transform="rotate(-39 34 32)"/>
+      <ellipse cx="86" cy="32" rx="12" ry="23" transform="rotate(39 86 32)"/>
+      <ellipse cx="19" cy="55" rx="12" ry="21" transform="rotate(-72 19 55)"/>
+      <ellipse cx="101" cy="55" rx="12" ry="21" transform="rotate(72 101 55)"/>
+    </g>
+    <path d="M36 69 A24 24 0 0 1 84 69 Z" fill="#F2B33D" stroke="#1F4D3E" stroke-width="3"/>
+    <path d="M43 59 Q45 54 49 52" fill="none" stroke="#FFE09A" stroke-width="4" stroke-linecap="round"/>
+  </svg>
+  <h1>Kiosco Escola 360</h1>
   <p>¿Con qué caja vas a trabajar?</p>
   <div class="botones-turno">
     <button class="btn-turno manana" onclick="elegirTurno('manana')">
